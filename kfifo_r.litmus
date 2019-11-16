@@ -1,0 +1,38 @@
+C kfifo_put(in)+kfifo_get(out)+reader_first
+
+(* P0: writer, P1: reader
+  in:  __kfifo.in
+  out: __kfifo.out
+  d:   __kfifo.data[0]
+  b:   read buffer
+ *)
+
+{
+	in = 1;
+	out = 0;
+	d = 0;
+	b = -1;
+}
+
+P0(int *in, int *out, int *d)
+{
+	if (*in == *out) {
+		*d = 1;
+		smp_wmb();
+		*in = *in + 1;
+	}
+}
+
+P1(int *in, int *out, int *d, int *b)
+{
+	int r;
+
+	if (*in != *out) {
+		r = *d;
+		*b = r;		// here is a load dependent store (memcpy or other)
+		smp_wmb();	// so, smp_wmb() is sufficent
+		*out = *out + 1;
+	}
+}
+
+exists (b=1)
